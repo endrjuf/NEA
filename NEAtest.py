@@ -52,18 +52,18 @@ def fillout(e):
 def check(e):
     typed = searchentry.get()
     if typed == "":
-        data = os.listdir("C:/Users/black/PycharmProjects/NEA/here")
+        data = os.listdir("music")
     else:
         data = []
-        for item in os.listdir("C:/Users/black/PycharmProjects/NEA/here"):
+        for item in os.listdir("music"):
             if typed.lower() in item.lower():
                 data.append(item)
     update(data)
 
 def textfile():
     # start editable vars #
-    outputfile = "C:/Users/black/PycharmProjects/NEA/files.txt"  # file to save the results to
-    folder = "C:/Users/black/PycharmProjects/NEA/here"  # the folder to inventory
+    outputfile = "transcripts.txt"  # file to save the results to
+    folder = "music"  # the folder to inventory
     exclude = ['Thumbs.db', '.tmp']  # exclude files containing these strings
     pathsep = "/"  # path seperator ('/' for linux, '\' for Windows)
     # end editable vars #
@@ -88,7 +88,7 @@ def getittle():
         print("\nNot a youtube link")
 
 def existancecheck(x):
-    with open("C:/Users/black/PycharmProjects/NEA/files.txt", "r") as a_file:
+    with open("transcripts.txt", "r") as a_file:
         for line in a_file:
             stripped_line = line.strip()
             if stripped_line == x:
@@ -100,7 +100,7 @@ def existancecheck(x):
 def ytDownload():
     yt = YouTube(inputvalue)
     video = yt.streams.filter(only_audio=True).first()
-    destination = "C:/Users/black/PycharmProjects/NEA/here"
+    destination = "music"
     out_file = video.download(destination)
     base, ext = os.path.splitext(out_file)
     # print(base)
@@ -123,7 +123,7 @@ def showSelected():
         print("\nNothing Selected!")
     else:
         print("\n" + text)
-    path = ("C:/Users/black/PycharmProjects/NEA/here/"+text)
+    path = ("music"+text)
     print(path)
     transcribe(path)
 
@@ -248,7 +248,7 @@ for frame in (frame1, frame2, frame3, frame4):
     frame.place(relx=0.1, rely=0.1, relwidth=0.8, relheight=0.8)
 
 ############################################################## Frame 1 CODE
-startkey = tk.PhotoImage(file="C:/Users/black/PycharmProjects/NEA/Start.png")
+startkey = tk.PhotoImage(file="Start.png")
 startsummarybutton = tk.Button(frame1, image=startkey, bd=0, bg="#AD8B84", activebackground="#AD8B84", command=lambda: (show_frame(frame2)))
 startsummarybutton.place(relx=0.3, rely=0.3, width=147, height=65)
 
@@ -258,7 +258,7 @@ titlelable.place(relx=0.3, rely=0.1, relwidth=0.4, relheight=0.15)
 settingsbutton = tk.Button(frame1, text="Settings", command=lambda: show_frame(frame4))
 settingsbutton.place(relx=0, rely=0, relwidth=0.1, relheight=0.1)
 
-managekey = tk.PhotoImage(file="C:/Users/black/PycharmProjects/NEA/Manage.png")
+managekey = tk.PhotoImage(file="Manage.png")
 managesummariesbutton = tk.Button(frame1, image=managekey, bd=0, bg="#AD8B84", activebackground="#AD8B84", command=lambda: show_frame(frame3))
 managesummariesbutton.place(relx=0.5, rely=0.29, width=147, height=65)
 
@@ -267,13 +267,13 @@ titlelable = tk.Label(frame2, text="New Summary", bg="#AD8B84", font=("Arial", 2
 titlelable.place(relx=0.3, rely=0., relwidth=0.4, relheight=0.15)
 
 backbutton = tk.Button(frame2, text="Back", width=100, height=100,
-                       command=lambda:(show_frame(frame1), clear_text(),searchentry.delete(0, tk.END), update(os.listdir("C:/Users/black/PycharmProjects/NEA/here"))))
+                       command=lambda:(show_frame(frame1), clear_text(),searchentry.delete(0, tk.END), update(os.listdir("music"))))
 backbutton.place(relx=0, rely=0.9, relwidth=0.1, relheight=0.1)
 
 linkinput = tk.Entry(frame2)
 linkinput.place(relx=0.2, rely=0.3, relwidth=0.3, relheight=0.05)
 
-refreshlistbox =  tk.Button(frame2, text="Refresh", command=lambda: (searchentry.delete(0, tk.END), update(os.listdir("C:/Users/black/PycharmProjects/NEA/here"))))
+refreshlistbox =  tk.Button(frame2, text="Refresh", command=lambda: (searchentry.delete(0, tk.END), update(os.listdir("music"))))
 refreshlistbox.place(relx=0.5, rely=0.5, relwidth=0.1, relheight=0.05)
 
 submitbutton = tk.Button(frame2, text="submit", command=lambda: (retrieve_input(), clear_text(),))
@@ -331,7 +331,7 @@ searchentry.bind("<KeyRelease>", check)
 
 audiolistbox.bind("<<ListboxSelect>>", fillout)
 
-update(os.listdir("C:/Users/black/PycharmProjects/NEA/here"))
+update(os.listdir("music"))
 show_frame(frame1)
 
 root.mainloop()
