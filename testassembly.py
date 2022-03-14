@@ -83,7 +83,7 @@ def getTranscription(tid):
 
 #########################################################
 
-audioUrl = uploadMyFile('Adele Hello lyrics.mp3')
+audioUrl = uploadMyFile('C:/Users/black/PycharmProjects/NEA/OCR A Level (H046-H446) Identify inputs and outputs.mp3')
 
 #########################################################
 
