@@ -123,7 +123,7 @@ def showSelected():
         print("\nNothing Selected!")
     else:
         print("\n" + text)
-    path = ("music"+text)
+    path = ("music/"+text)
     print(path)
     transcribe(path)
 
