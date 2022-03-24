@@ -4,8 +4,12 @@ import webbrowser
 import os
 from pytube import YouTube
 import re
-
-
+import shutil
+from transformers import pipeline
+import os.path
+import textwrap
+import time
+import requests
 
 
 HEIGHT = 900
@@ -22,21 +26,27 @@ frame3 = tk.Frame(root, bg="yellow")
 frame4 = tk.Frame(root, bg="green")
 frame5 = tk.Frame(frame2)
 
+
 def assignfolder():
     open_folder = filedialog.askdirectory(initialdir="/", title="Select file")
+
 
 def assignfile():
     open_file = filedialog.askopenfilename(initialdir="/", title="Select file", filetypes=[("txt files", "*.txt")])
 
+
 def show_frame(frame):
     frame.tkraise()
+
 
 def clear_text():
    linkinput.delete(0, tk.END)
 
+
 def browseFiles():
     mp3audio = tk.filedialog.askopenfilename(initialdir="/", title="Select file", filetypes=[("Mp3 Files", "*.mp3")])
-    # webbrowser.open(mp3audio)
+    shutil.copy(mp3audio, 'music',  follow_symlinks=True)
+
 
 def update(data):
     audiolistbox.delete(0, tk.END)
@@ -44,10 +54,12 @@ def update(data):
     for item in data:
         audiolistbox.insert(tk.END, item)
 
+
 def fillout(e):
     searchentry.delete(0, tk.END)
 
     searchentry.insert(0, audiolistbox.get(tk.ANCHOR))
+
 
 def check(e):
     typed = searchentry.get()
@@ -60,9 +72,10 @@ def check(e):
                 data.append(item)
     update(data)
 
+
 def textfile():
     # start editable vars #
-    outputfile = "transcripts.txt"  # file to save the results to
+    outputfile = "titles.txt"  # file to save the results to
     folder = "music"  # the folder to inventory
     exclude = ['Thumbs.db', '.tmp']  # exclude files containing these strings
     pathsep = "/"  # path seperator ('/' for linux, '\' for Windows)
@@ -77,6 +90,7 @@ def textfile():
                     txtfile.write("%s\n" % filename)
     txtfile.close()
 
+
 def getittle():
     try:
         yt = YouTube(inputvalue)
@@ -87,8 +101,9 @@ def getittle():
     except:
         print("\nNot a youtube link")
 
+
 def existancecheck(x):
-    with open("transcripts.txt", "r") as a_file:
+    with open("titles.txt", "r") as a_file:
         for line in a_file:
             stripped_line = line.strip()
             if stripped_line == x:
@@ -96,6 +111,7 @@ def existancecheck(x):
                 break
         else:
             ytDownload()
+
 
 def ytDownload():
     yt = YouTube(inputvalue)
@@ -112,10 +128,12 @@ def ytDownload():
     completed.after(3000, lambda: completed.destroy())
     textfile()
 
+
 def retrieve_input():
     global inputvalue
     inputvalue = linkinput.get()
     getittle()
+
 
 def showSelected():
     text=audiolistbox.get(tk.ANCHOR)
@@ -125,123 +143,166 @@ def showSelected():
         print("\n" + text)
     path = ("music/"+text)
     print(path)
-    transcribe(path)
+    transcribe(path, text)
 
-def transcribe(filename):
-    import requests
-    import time
 
-    #########################################################
+def transcribe(filename, nameoftranscription):
+    x = nameoftranscription[:-4] + '-transcripts.txt'
+    path = ('E:/NEA/Transcriptions/' + x)
+    print(os.path.isfile(path))
+    if os.path.exists(path) == True:
+        print('Transcript Already exist, do you want to try to summaries')
+        answer = str(input("y/n : "))
+        if answer == 'y':
+            # transcribe()
+            print('exist')
+        else:
+            print(":D")
+    else:
 
-    authKey = '3348883f28df463b9fe41079aa10b7af'
+        #########################################################
 
-    headers = {
-        'authorization': authKey,
-        'content-type': 'application/json'
-    }
+        authKey = '3348883f28df463b9fe41079aa10b7af'
 
-    uploadUrl = 'https://api.assemblyai.com/v2/upload'
-    transcriptUrl = 'https://api.assemblyai.com/v2/transcript'
+        headers = {
+            'authorization': authKey,
+            'content-type': 'application/json'
+        }
 
-    #########################################################
-    def uploadMyFile(fileName):
+        uploadUrl = 'https://api.assemblyai.com/v2/upload'
+        transcriptUrl = 'https://api.assemblyai.com/v2/transcript'
 
-        def _readmyFile(fn):
+        #########################################################
+        def uploadMyFile(fileName):
 
-            chunkSize = 5242880
+            def _readmyFile(fn):
 
-            with open(fn, "rb") as fileStream:
+                chunkSize = 5242880
 
-                while True:
-                    data = fileStream.read(chunkSize)
+                with open(fn, "rb") as fileStream:
 
-                    if not data:
-                        break
+                    while True:
+                        data = fileStream.read(chunkSize)
 
-                    yield data
+                        if not data:
+                            break
 
-        response = requests.post(
-            uploadUrl,
-            headers=headers,
-            data=_readmyFile(fileName)
+                        yield data
 
-        )
+            response = requests.post(
+                uploadUrl,
+                headers=headers,
+                data=_readmyFile(fileName)
 
-        json = response.json()
-
-        return json['upload_url']
-
-    def startTranscription(aurl):
-
-        response = requests.post(
-            transcriptUrl,
-            headers=headers,
-            json={'audio_url': aurl}
-        )
-
-        json = response.json()
-
-        return json['id']
-
-    def getTranscription(tid):
-
-        maxAttempts = 50
-        timedout = False
-
-        while True:
-            response = requests.get(
-                f'{transcriptUrl}/{tid}',
-                headers=headers
             )
 
             json = response.json()
 
-            if json['status'] == 'completed':
-                break
+            return json['upload_url']
 
-            maxAttempts -= 1
-            timedout = maxAttempts <= 0
+        def startTranscription(aurl):
 
-            print(maxAttempts)
+            response = requests.post(
+                transcriptUrl,
+                headers=headers,
+                json={'audio_url': aurl}
+            )
 
-            if timedout:
-                break
+            json = response.json()
 
-            time.sleep(3)
+            return json['id']
 
-        return 'Timed out...' if timedout else json['text']
+        def getTranscription(tid):
 
-    #########################################################
+            maxAttempts = 50
+            timedout = False
 
-    audioUrl = uploadMyFile(filename)
+            while True:
+                response = requests.get(
+                    f'{transcriptUrl}/{tid}',
+                    headers=headers
+                )
 
-    #########################################################
+                json = response.json()
 
-    transcriptionID = startTranscription(audioUrl)
+                if json['status'] == 'completed':
+                    break
 
-    #########################################################
+                maxAttempts -= 1
+                timedout = maxAttempts <= 0
 
-    text = getTranscription(transcriptionID)
-    textwrap(text)
+                print(maxAttempts)
 
-def textwrap(text):
-    x = text
-    lim = 100
+                if timedout:
+                    break
 
-    for s in x.split("\n"):
-        if s == "": print
-        w = 0
-        l = []
-        for d in s.split():
-            if w + len(d) + 1 <= lim:
-                l.append(d)
-                w += len(d) + 1
+                time.sleep(3)
+
+            return 'Timed out...' if timedout else json['text']
+
+        #########################################################
+
+        audioUrl = uploadMyFile(filename)
+
+        #########################################################
+
+        transcriptionID = startTranscription(audioUrl)
+
+        #########################################################
+
+        text = getTranscription(transcriptionID)
+        summarisation(text, nameoftranscription)
+
+        wrapper = textwrap.TextWrapper(width=100)
+        string = wrapper.fill(text=text)
+
+        save_path = 'E:/NEA/Transcriptions'
+        name_of_file = nameoftranscription[:-4] + '-transcripts'
+        completeName = os.path.join(save_path, name_of_file + ".txt")
+        file1 = open(completeName, 'w')
+        file1.write(string)
+        file1.close()
+
+
+def summarisation(transcription, nameoftranscription):
+    summarizer = pipeline("summarization", model='google/pegasus-large')
+
+    max_chunk = 50
+
+    transcription = transcription.replace('.', '.<eos>')
+    transcription = transcription.replace('?', '?<eos>')
+    transcription = transcription.replace('!', '!<eos>')
+
+    sentences = transcription.split('<eos>')
+    current_chunk = 0
+    chunks = []
+    for sentence in sentences:
+        if len(chunks) == current_chunk + 1:
+            if len(chunks[current_chunk]) + len(sentence.split(' ')) <= max_chunk:
+                chunks[current_chunk].extend(sentence.split(' '))
             else:
-                print(" ".join(l))
-                l = [d]
-                w = len(d)
-        if (len(l)): print(" ".join(l))
+                current_chunk += 1
+                chunks.append(sentence.split(' '))
+        else:
+            print(current_chunk)
+            chunks.append(sentence.split(' '))
 
+    for chunk_id in range(len(chunks)):
+        chunks[chunk_id] = ' '.join(chunks[chunk_id])
+
+    res = summarizer(chunks, min_length=30, do_sample=False)
+
+    text = ' '.join([summ['summary_text'] for summ in res])
+
+    wrapper = textwrap.TextWrapper(width=100)
+    string = wrapper.fill(text=text)
+
+    save_path = 'E:/NEA/summaries'
+    name_of_file = nameoftranscription[:-4] + '-summary'
+    completeName = os.path.join(save_path, name_of_file + ".txt")
+    file1 = open(completeName, 'w')
+    file1.write(string)
+    file1.close()
 
 
 for frame in (frame1, frame2, frame3, frame4):
@@ -281,7 +342,7 @@ submitbutton.place(relx=0.53, rely=0.3, relwidth=0.1, relheight=0.05)
 root.bind('<Return>', lambda event:clear_text())
 
 buttonexplore = tk.Button(frame2, text="Browse Files", command=browseFiles)
-buttonexplore.place(relx=0.8, rely=0.3, relwidth=0.1, relheigh=0.1)
+buttonexplore.place(relx=0.65, rely=0.3, relwidth=0.1, relheight=0.05)
 
 frame5.place(relx=0.15, rely=0.65)
 
@@ -294,7 +355,7 @@ scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 audiolistbox.config(yscrollcommand=scrollbar.set)
 
 searchentry = tk.Entry(frame2)
-searchentry.place(relx=0.15, rely=0.58, relwidth=0.6, relheight=0.05)
+searchentry.place(relx=0.15, rely=0.58, width=590, relheight=0.05)
 
 selectbutton = tk.Button(frame2, text="Proceed with selected", command=lambda:showSelected())
 selectbutton.place(relx=0.78, rely=0.58, relheight=0.05, relwidth=0.15)
