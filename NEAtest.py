@@ -4,26 +4,41 @@ import webbrowser
 import os
 from pytube import YouTube
 import re
-import shutil
-from transformers import pipeline
-import os.path
 import textwrap
-import time
+from transformers import pipeline
 import requests
+import time
+import shutil
+from pathlib import Path
+from progress.bar import Bar
+from threading import Thread
 
 
-HEIGHT = 900
-WIDTH = 1200
+
+
+print("Working dir:", os.getcwd())
+os.chdir("C:/Users/black/PycharmProjects/NEA")
+print("Working dir:", os.getcwd())
+
+
+
+HEIGHT = 630
+WIDTH = 980
 
 root = tk.Tk()
 
 canvas = tk.Canvas(root, height=HEIGHT, width=WIDTH)
 canvas.pack()
 
-frame1 = tk.Frame(root, bg="#AD8B84")
-frame2 = tk.Frame(root, bg="blue")
-frame3 = tk.Frame(root, bg="yellow")
-frame4 = tk.Frame(root, bg="green")
+root.resizable(False, False)
+
+colorx = "#F4BE40"
+
+
+frame1 = tk.Frame(root, bg=colorx)
+frame2 = tk.Frame(root, bg=colorx)
+frame3 = tk.Frame(root, bg=colorx)
+frame4 = tk.Frame(root, bg=colorx)
 frame5 = tk.Frame(frame2)
 
 
@@ -45,7 +60,10 @@ def clear_text():
 
 def browseFiles():
     mp3audio = tk.filedialog.askopenfilename(initialdir="/", title="Select file", filetypes=[("Mp3 Files", "*.mp3")])
-    shutil.copy(mp3audio, 'music',  follow_symlinks=True)
+    try:
+        shutil.copy(mp3audio, 'music',  follow_symlinks=True)
+    except:
+        print("None selected")
 
 
 def update(data):
@@ -147,22 +165,29 @@ def showSelected():
 
 
 def transcribe(filename, nameoftranscription):
-    x = nameoftranscription[:-4] + '-transcripts.txt'
-    path = ('E:/NEA/Transcriptions/' + x)
+    x = nameoftranscription[:-4] + '-transcript.txt'
+    path = ('transcripts/' + x)
     print(os.path.isfile(path))
     if os.path.exists(path) == True:
-        print('Transcript Already exist, do you want to try to summaries')
+        print('Transcript Already exist, do you want to try to summarise')
         answer = str(input("y/n : "))
         if answer == 'y':
-            # transcribe()
-            print('exist')
+            y = nameoftranscription[:-4] + '-summary.txt'
+            path2 = ('summaries/' + y)
+            if os.path.exists(path2) == True:
+                print("Summary already exists")
+            else:
+                txt = Path(path).read_text()
+                summarisation(txt, nameoftranscription)
+        elif answer == 'n':
+            print("ok")
         else:
-            print(":D")
+            print("Not right answer")
     else:
 
         #########################################################
 
-        authKey = '3348883f28df463b9fe41079aa10b7af'
+        authKey = '39e03013f79342708b140a7f4668a0cd'
 
         headers = {
             'authorization': authKey,
@@ -251,102 +276,141 @@ def transcribe(filename, nameoftranscription):
         #########################################################
 
         text = getTranscription(transcriptionID)
-        summarisation(text, nameoftranscription)
 
         wrapper = textwrap.TextWrapper(width=100)
         string = wrapper.fill(text=text)
 
-        save_path = 'E:/NEA/Transcriptions'
-        name_of_file = nameoftranscription[:-4] + '-transcripts'
+        save_path = 'transcripts'
+        name_of_file = nameoftranscription[:-4] + '-transcript'
         completeName = os.path.join(save_path, name_of_file + ".txt")
         file1 = open(completeName, 'w')
         file1.write(string)
         file1.close()
+        print('Done transcribing')
+
+        summarisation(text, nameoftranscription)
 
 
 def summarisation(transcription, nameoftranscription):
     summarizer = pipeline("summarization", model='google/pegasus-large')
 
-    max_chunk = 50
+    numberofwords = len(transcription)
 
-    transcription = transcription.replace('.', '.<eos>')
-    transcription = transcription.replace('?', '?<eos>')
-    transcription = transcription.replace('!', '!<eos>')
+    if numberofwords < 50:
+        print('Read it urself loser')
+    else:
 
-    sentences = transcription.split('<eos>')
-    current_chunk = 0
-    chunks = []
-    for sentence in sentences:
-        if len(chunks) == current_chunk + 1:
-            if len(chunks[current_chunk]) + len(sentence.split(' ')) <= max_chunk:
-                chunks[current_chunk].extend(sentence.split(' '))
+        max_chunk = (numberofwords//20)
+
+        transcription = transcription.replace('.', '.<eos>')
+        transcription = transcription.replace('?', '?<eos>')
+        transcription = transcription.replace('!', '!<eos>')
+
+        sentences = transcription.split('<eos>')
+        current_chunk = 0
+        chunks = []
+
+        print("Start chunking")
+
+        for sentence in sentences:
+            if len(chunks) == current_chunk + 1:
+                if len(chunks[current_chunk]) + len(sentence.split(' ')) <= max_chunk:
+                    chunks[current_chunk].extend(sentence.split(' '))
+                else:
+                    current_chunk += 1
+                    chunks.append(sentence.split(' '))
             else:
-                current_chunk += 1
+                print(current_chunk)
                 chunks.append(sentence.split(' '))
-        else:
-            print(current_chunk)
-            chunks.append(sentence.split(' '))
 
-    for chunk_id in range(len(chunks)):
-        chunks[chunk_id] = ' '.join(chunks[chunk_id])
+        for chunk_id in range(len(chunks)):
+            chunks[chunk_id] = ' '.join(chunks[chunk_id])
 
-    res = summarizer(chunks, min_length=30, do_sample=False)
+        print("Done chunking")
 
-    text = ' '.join([summ['summary_text'] for summ in res])
+        time.sleep(2)
 
-    wrapper = textwrap.TextWrapper(width=100)
-    string = wrapper.fill(text=text)
+        print('Starting summarising')
 
-    save_path = 'E:/NEA/summaries'
-    name_of_file = nameoftranscription[:-4] + '-summary'
-    completeName = os.path.join(save_path, name_of_file + ".txt")
-    file1 = open(completeName, 'w')
-    file1.write(string)
-    file1.close()
+        def joining():
+            print("We start pls we really do")
+            res = summarizer(chunks, min_length=30, do_sample=False)
+            text = ' '.join([summ['summary_text'] for summ in res])
+            print(text)
+            for i in range(0,100):
+                print(i)
+
+        def start_joining():
+            print("WHHHHAio")
+            t = Thread(target=joining, daemon=True)
+            t.start()
+
+        start_joining()
+
+
+        # wrapper = textwrap.TextWrapper(width=100)
+        # string = wrapper.fill(text=text)
+        #
+        # save_path = 'summaries'
+        # name_of_file = nameoftranscription[:-4] + '-summary'
+        # completeName = os.path.join(save_path, name_of_file + ".txt")
+        # file1 = open(completeName, 'w')
+        # file1.write(string)
+        # file1.close()
+        #
+        # print('Done summarising')
+
 
 
 for frame in (frame1, frame2, frame3, frame4):
-    frame.place(relx=0.1, rely=0.1, relwidth=0.8, relheight=0.8)
+    frame.place(relx=0, rely=0, relwidth=1, relheight=1)
+
 
 ############################################################## Frame 1 CODE
-startkey = tk.PhotoImage(file="Start.png")
-startsummarybutton = tk.Button(frame1, image=startkey, bd=0, bg="#AD8B84", activebackground="#AD8B84", command=lambda: (show_frame(frame2)))
-startsummarybutton.place(relx=0.3, rely=0.3, width=147, height=65)
+start_key = tk.PhotoImage(file="button_start-new-summary.png")
+start_summary_button = tk.Button(frame1, image=start_key, bd=0, bg=colorx, activebackground=colorx, command=lambda: (show_frame(frame2)))
+start_summary_button.place(relx=0.08, rely=0.4, relwidth=0.38, relheight=0.12)
 
-titlelable = tk.Label(frame1, text="SUMMARISATION APP", bg="#AD8B84", font=("Arial", 20))
-titlelable.place(relx=0.3, rely=0.1, relwidth=0.4, relheight=0.15)
+title_label = tk.Label(frame1, text="Summarisation App", bg=colorx, font=("Segoe UI Semibold", 40))
+title_label.place(relx=0.15, rely=0.1, relwidth=0.7, relheight=0.3)
 
-settingsbutton = tk.Button(frame1, text="Settings", command=lambda: show_frame(frame4))
-settingsbutton.place(relx=0, rely=0, relwidth=0.1, relheight=0.1)
+settings_key = tk.PhotoImage(file='png-transparent-button-computer-icons-setting-button-ribbon-black-desktop-wallpaper.png')
+settingsbutton = tk.Button(frame1, image=settings_key, bd=0, bg=colorx, activebackground=colorx, command=lambda: show_frame(frame4))
+settingsbutton.place(relx=0, rely=0, relwidth=0.11, relheight=0.145)
 
-managekey = tk.PhotoImage(file="Manage.png")
-managesummariesbutton = tk.Button(frame1, image=managekey, bd=0, bg="#AD8B84", activebackground="#AD8B84", command=lambda: show_frame(frame3))
-managesummariesbutton.place(relx=0.5, rely=0.29, width=147, height=65)
+managekey = tk.PhotoImage(file="button_manage-summaries.png")
+managesummariesbutton = tk.Button(frame1, image=managekey, bd=0, bg=colorx, activebackground=colorx, command=lambda: show_frame(frame3))
+managesummariesbutton.place(relx=0.54, rely=0.4, relwidth=0.38, relheight=0.12)
 
 ############################################################## Frame 2 CODE
-titlelable = tk.Label(frame2, text="New Summary", bg="#AD8B84", font=("Arial", 20), bd=0)
-titlelable.place(relx=0.3, rely=0., relwidth=0.4, relheight=0.15)
+titlelable = tk.Label(frame2, text="New Summary", bg=colorx, font=("Segoe UI Semibold", 40))
+titlelable.place(relx=0.25, rely=0.05, relwidth=0.5, relheight=0.2)
 
-backbutton = tk.Button(frame2, text="Back", width=100, height=100,
+back_key = tk.PhotoImage(file='button_back.png')
+backbutton = tk.Button(frame2, image = back_key, bd=0, bg=colorx, activebackground=colorx,
                        command=lambda:(show_frame(frame1), clear_text(),searchentry.delete(0, tk.END), update(os.listdir("music"))))
-backbutton.place(relx=0, rely=0.9, relwidth=0.1, relheight=0.1)
+backbutton.place(relx=0.0005, rely=0.85, relwidth=0.14, relheight=0.18)
 
-linkinput = tk.Entry(frame2)
-linkinput.place(relx=0.2, rely=0.3, relwidth=0.3, relheight=0.05)
+youtubelink = tk.Label(frame2, text="Youtube Link:", bg=colorx, font=("Segoe UI Semibold", 20))
+youtubelink.place(relx=0.12, rely=0.3, relwidth=0.25, relheight=0.09)
+
+linkinput = tk.Entry(frame2, font=("Segoe UI Semibold", 13))
+linkinput.place(relx=0.33, rely=0.3, relwidth=0.37, relheight=0.1)
 
 refreshlistbox =  tk.Button(frame2, text="Refresh", command=lambda: (searchentry.delete(0, tk.END), update(os.listdir("music"))))
-refreshlistbox.place(relx=0.5, rely=0.5, relwidth=0.1, relheight=0.05)
+refreshlistbox.place(relx=0.5, rely=0.42, relwidth=0.1, relheight=0.05)
 
-submitbutton = tk.Button(frame2, text="submit", command=lambda: (retrieve_input(), clear_text(),))
-submitbutton.place(relx=0.53, rely=0.3, relwidth=0.1, relheight=0.05)
+submit_key = tk.PhotoImage(file="button_submit.png")
+submitbutton = tk.Button(frame2, image=submit_key, bd=0, bg=colorx, activebackground=colorx, command=lambda: (retrieve_input(), clear_text(),))
+submitbutton.place(relx=0.7, rely=0.3, relwidth=0.16, relheight=0.11)
 root.bind('<Return>', lambda event:clear_text())
 
-buttonexplore = tk.Button(frame2, text="Browse Files", command=browseFiles)
-buttonexplore.place(relx=0.65, rely=0.3, relwidth=0.1, relheight=0.05)
+# buttonexplore = tk.Button(frame2, text="Browse Files", command=browseFiles)
+# buttonexplore.place(relx=0.65, rely=0.3, relwidth=0.1, relheight=0.05)
 
-frame5.place(relx=0.15, rely=0.65)
+frame5.place(relx=0.15, rely=0.57)
 
-audiolistbox = tk.Listbox(frame5, fg="black", height=10, width=95)
+audiolistbox = tk.Listbox(frame5, fg="black", height=15, width=95)
 audiolistbox.pack(side=tk.LEFT, fill=tk.Y)
 
 scrollbar = tk.Scrollbar(frame5, orient=tk.VERTICAL, command=audiolistbox.yview)
@@ -355,7 +419,7 @@ scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 audiolistbox.config(yscrollcommand=scrollbar.set)
 
 searchentry = tk.Entry(frame2)
-searchentry.place(relx=0.15, rely=0.58, width=590, relheight=0.05)
+searchentry.place(relx=0.15, rely=0.5, width=590, relheight=0.05)
 
 selectbutton = tk.Button(frame2, text="Proceed with selected", command=lambda:showSelected())
 selectbutton.place(relx=0.78, rely=0.58, relheight=0.05, relwidth=0.15)
