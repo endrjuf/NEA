@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import filedialog
+from tkinter import ttk
 import webbrowser
 import os
 from pytube import YouTube
@@ -10,16 +11,10 @@ import requests
 import time
 import shutil
 from pathlib import Path
-from progress.bar import Bar
 from threading import Thread
 
 
-
-
 print("Working dir:", os.getcwd())
-os.chdir("C:/Users/black/PycharmProjects/NEA")
-print("Working dir:", os.getcwd())
-
 
 
 HEIGHT = 630
@@ -27,13 +22,21 @@ WIDTH = 980
 
 root = tk.Tk()
 
+
 canvas = tk.Canvas(root, height=HEIGHT, width=WIDTH)
 canvas.pack()
+
+screen_width = root.winfo_screenwidth()
+screen_height = root.winfo_screenheight()
+
+x = (screen_width/2) - (WIDTH/2)
+y = (screen_height/2) - (HEIGHT/2)
+
+root.geometry(f'{WIDTH}x{HEIGHT}+{int(x)}+{int(y)}')
 
 root.resizable(False, False)
 
 colorx = "#F4BE40"
-
 
 frame1 = tk.Frame(root, bg=colorx)
 frame2 = tk.Frame(root, bg=colorx)
@@ -137,13 +140,19 @@ def ytDownload():
     destination = "music"
     out_file = video.download(destination)
     base, ext = os.path.splitext(out_file)
-    # print(base)
-    # print(ext)
     new_file = base + ".mp3"
     os.rename(out_file, new_file)
-    completed = tk.Label(frame2, text="Successfully downloaded", bg="blue")
-    completed.place(relx=0.3, rely=0.35, relwidth=0.2, relheight=0.1)
-    completed.after(3000, lambda: completed.destroy())
+    win2 = tk.Toplevel(root)
+    w = root.winfo_x()
+    h = root.winfo_y()
+    win2.geometry("200x100"f'+{w+375}+{h+250}')
+    win2.resizable(0, 0)
+    my_label = tk.Label(win2, text="Succsefully Downloaded",font=("Segoe UI Semibold", 10))
+    my_label.place(relx=0.1, rely=0.2, relheight=0.2, relwidth=0.8)
+    destroy_button = tk.Button(win2, text="Ok", command=lambda: win2.destroy())
+    destroy_button.place(relx=0.3, rely=0.5, relheight=0.2, relwidth=0.4)
+    win2.grab_set()
+    root.wait_window(win2)
     textfile()
 
 
@@ -297,7 +306,7 @@ def summarisation(transcription, nameoftranscription):
     numberofwords = len(transcription)
 
     if numberofwords < 50:
-        print('Read it urself loser')
+        print('Too short to summarise')
     else:
 
         max_chunk = (numberofwords//20)
@@ -333,33 +342,28 @@ def summarisation(transcription, nameoftranscription):
         print('Starting summarising')
 
         def joining():
-            print("We start pls we really do")
             res = summarizer(chunks, min_length=30, do_sample=False)
             text = ' '.join([summ['summary_text'] for summ in res])
-            print(text)
+
             for i in range(0,100):
                 print(i)
+            wrapper = textwrap.TextWrapper(width=100)
+            string = wrapper.fill(text=text)
+
+            save_path = 'summaries'
+            name_of_file = nameoftranscription[:-4] + '-summary'
+            completeName = os.path.join(save_path, name_of_file + ".txt")
+            file1 = open(completeName, 'w')
+            file1.write(string)
+            file1.close()
+
+            print('Done summarising')
 
         def start_joining():
-            print("WHHHHAio")
             t = Thread(target=joining, daemon=True)
             t.start()
 
         start_joining()
-
-
-        # wrapper = textwrap.TextWrapper(width=100)
-        # string = wrapper.fill(text=text)
-        #
-        # save_path = 'summaries'
-        # name_of_file = nameoftranscription[:-4] + '-summary'
-        # completeName = os.path.join(save_path, name_of_file + ".txt")
-        # file1 = open(completeName, 'w')
-        # file1.write(string)
-        # file1.close()
-        #
-        # print('Done summarising')
-
 
 
 for frame in (frame1, frame2, frame3, frame4):
